@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>QA Helper — Test Cases &amp; Bug Reports</title>
+<meta name="description" content="A small support/QA tool: turn a feature into test cases, and messy notes into a clean bug repro report. Built by Md. Jahidul Islam Hemel." />
+<style>
+  :root{
+    --bg:#0B1020; --panel:#121a2e; --panel2:#0d1324; --line:#1e2a44; --line2:#283655;
+    --text:#EAF0FB; --soft:#C3CFE6; --muted:#8798B5; --a1:#3BA7FF; --a2:#22D3EE;
+    --mono:"JetBrains Mono",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:linear-gradient(160deg,#0b1020,#0d1526);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;min-height:100vh;line-height:1.6}
+  header{text-align:center;padding:30px 20px 10px}
+  header h1{font-size:23px;font-weight:600}
+  header h1 b{background:linear-gradient(100deg,var(--a1),var(--a2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  header p{color:var(--muted);font-size:14px;margin-top:6px}
+  .wrap{max-width:1040px;margin:0 auto;padding:14px 16px 60px}
+  .modes{display:flex;gap:8px;justify-content:center;margin:16px 0 18px}
+  .modes button{background:var(--panel);color:var(--soft);border:1px solid var(--line);border-radius:100px;padding:9px 18px;font-size:14px;cursor:pointer;transition:.2s}
+  .modes button.on{background:linear-gradient(100deg,var(--a1),var(--a2));color:#06121f;border-color:transparent;font-weight:600}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:820px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px}
+  textarea{width:100%;min-height:150px;resize:vertical;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:14px;line-height:1.5;font-family:inherit}
+  textarea:focus{outline:none;border-color:var(--a1)}
+  .chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+  .chips span{font-size:12px;background:#17213a;color:var(--muted);border:1px solid var(--line);padding:5px 10px;border-radius:20px;cursor:pointer}
+  .chips span:hover{border-color:var(--a1);color:var(--text)}
+  .row{display:flex;gap:10px;margin-top:12px}
+  button.go{background:linear-gradient(100deg,var(--a1),var(--a2));color:#06121f;border:0;border-radius:10px;padding:11px 18px;font-size:14px;font-weight:600;cursor:pointer}
+  button.ghost{background:transparent;border:1px solid var(--line2);color:var(--soft);border-radius:10px;padding:11px 16px;font-size:13px;cursor:pointer}
+  button.ghost:hover{border-color:var(--a1);color:var(--text)}
+  pre{white-space:pre-wrap;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;font-family:var(--mono);font-size:12.5px;color:var(--soft);line-height:1.7;min-height:150px;overflow:auto}
+  .empty{color:var(--muted);font-size:14px}
+  .copied{color:var(--a2);font-size:12px;opacity:0;transition:.2s}.copied.show{opacity:1}
+  footer{text-align:center;color:var(--muted);font-size:12.5px;padding:0 20px 40px;line-height:1.7}
+  footer a{color:var(--a2);text-decoration:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>QA Helper <b>·</b> Test Cases &amp; Bug Reports</h1>
+  <p>Turn a feature into test cases, or messy notes into a clean, dev-ready bug report.</p>
+</header>
+<div class="wrap">
+  <div class="modes">
+    <button id="mTest" class="on" onclick="setMode('test')">Test case generator</button>
+    <button id="mBug" onclick="setMode('bug')">Bug report formatter</button>
+  </div>
+  <div class="grid">
+    <div class="card">
+      <h2 id="inLabel">Describe the feature to test</h2>
+      <textarea id="input" placeholder="e.g. DiscountRay applies a 10% quantity discount when the cart has 3 or more of a product."></textarea>
+      <div class="chips" id="chips"></div>
+      <div class="row">
+        <button class="go" id="run">Generate</button>
+        <button class="ghost" id="clear">Clear</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Output <button class="ghost" id="copy" style="padding:4px 10px;font-size:12px;margin-left:6px">Copy</button> <span class="copied" id="copied">Copied</span></h2>
+      <pre id="out"><span class="empty">Your generated test cases or bug report will appear here.</span></pre>
+    </div>
+  </div>
+</div>
+<footer>
+  Built with AI assistance (vibe coding) by Md. Jahidul Islam Hemel · <a href="https://jahidhemel.github.io/">Portfolio</a><br>
+  Rule-based helper — a support engineer reviews and adjusts the output before use.
+</footer>
+
+<script>
+var mode="test";
+var SAMPLE={
+  test:"DiscountRay applies a 10% quantity discount when the cart has 3 or more of a product.",
+  bug:"customer says bundle not showing on product page. using dawn theme. app embed maybe off. chrome. started after theme update. store mystore.myshopify.com"
+};
+var CHIPS={
+  test:["Discount at checkout","Variant add-to-cart","File upload field","Login / SSO","Delivery date picker"],
+  bug:["Bundle not showing","Discount not applying","Login error","Checkout crash"]
+};
+var CHIPTEXT={
+  "Discount at checkout":"A percentage discount applies automatically at checkout when the cart subtotal is over $50.",
+  "Variant add-to-cart":"MultiVariants lets a customer add several variants of a product to the cart in one click.",
+  "File upload field":"A product option lets the customer upload an image file before adding to cart.",
+  "Login / SSO":"Customers sign in with Okta SSO before they can see wholesale prices.",
+  "Delivery date picker":"OrderRules shows a delivery date picker on the cart with blackout dates disabled.",
+  "Bundle not showing":"customer: my bundle is not showing on the product page. dawn theme. chrome desktop. app embed maybe off. store mystore.myshopify.com",
+  "Discount not applying":"discount code SAVE10 not applying at checkout for a specific customer. guest checkout. started today.",
+  "Login error":"user cannot log in, sees 'invalid token' error. happens on safari only. multiple users affected. urgent.",
+  "Checkout crash":"checkout page goes blank when clicking place order. mobile iphone. after latest app update."
+};
+
+function setMode(m){
+  mode=m;
+  document.getElementById("mTest").classList.toggle("on",m==="test");
+  document.getElementById("mBug").classList.toggle("on",m==="bug");
+  document.getElementById("inLabel").textContent = m==="test" ? "Describe the feature to test" : "Paste the messy bug notes";
+  document.getElementById("input").placeholder = m==="test" ? SAMPLE.test : SAMPLE.bug;
+  document.getElementById("out").innerHTML='<span class="empty">Your '+(m==="test"?"test cases":"bug report")+' will appear here.</span>';
+  renderChips();
+}
+function renderChips(){
+  var c=document.getElementById("chips"); c.innerHTML="";
+  CHIPS[mode].forEach(function(label){
+    var s=document.createElement("span"); s.textContent=label;
+    s.onclick=function(){ document.getElementById("input").value=CHIPTEXT[label]; run(); };
+    c.appendChild(s);
+  });
+}
+
+function titleCase(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+
+function genTests(t){
+  var low=t.toLowerCase();
+  var L=[];
+  L.push("TEST PLAN");
+  L.push("Feature: "+t.trim());
+  L.push("");
+  L.push("1. HAPPY PATH");
+  L.push("  - Verify the feature works as described with valid, typical input.");
+  L.push("  - Confirm the expected result is shown to the customer clearly.");
+  L.push("");
+  L.push("2. BOUNDARY / LIMITS");
+  if(/\b(\d+)\b/.test(low)){ var n=low.match(/\b(\d+)\b/)[1];
+    L.push("  - Test exactly at the threshold ("+n+") and just below/above ("+(n-1)+" / "+(+n+1)+").");
+  } else { L.push("  - Test the minimum and maximum allowed values."); }
+  L.push("  - Test empty / zero / very large values.");
+  L.push("");
+  L.push("3. NEGATIVE / INVALID");
+  L.push("  - Enter invalid or unexpected input and confirm a clear error, not a crash.");
+  L.push("  - Confirm the action is blocked when conditions are not met.");
+  L.push("");
+  L.push("4. EDGE CASES");
+  if(low.indexOf("discount")>-1||low.indexOf("checkout")>-1){ L.push("  - Discount combined with another automatic discount or a code (does it stack as expected?).");
+    L.push("  - Guest checkout vs signed-in customer."); L.push("  - Works through Shop Pay / Apple Pay / express checkout."); }
+  if(low.indexOf("variant")>-1||low.indexOf("cart")>-1){ L.push("  - Product with 1 variant vs many variants."); L.push("  - Out-of-stock / unavailable variant."); }
+  if(low.indexOf("upload")>-1||low.indexOf("file")>-1){ L.push("  - Wrong file type and oversized file."); L.push("  - Upload then remove / re-upload."); }
+  if(low.indexOf("login")>-1||low.indexOf("sso")>-1){ L.push("  - Expired session / token."); L.push("  - Wrong credentials and account with no access."); }
+  if(low.indexOf("date")>-1||low.indexOf("delivery")>-1){ L.push("  - Blackout date and a past date are not selectable."); L.push("  - Timezone handling."); }
+  L.push("  - Behaviour after a page refresh or going back.");
+  L.push("");
+  L.push("5. COMPATIBILITY");
+  L.push("  - Chrome, Safari, Firefox; desktop and mobile.");
+  L.push("  - A second Shopify theme (e.g. Dawn vs a custom theme).");
+  L.push("");
+  L.push("6. REGRESSION CHECK");
+  L.push("  - Confirm nearby features still work and nothing else broke.");
+  return L.join("\n");
+}
+
+function genBug(t){
+  var low=t.toLowerCase();
+  function grab(re){ var m=t.match(re); return m?m[0]:null; }
+  var store=grab(/[\w.-]+\.myshopify\.com/i);
+  var browser=(low.match(/chrome|safari|firefox|edge|mobile|iphone|android/gi)||[]).join(", ");
+  var sev = /urgent|cannot|can't|crash|blank|down|all users|multiple users|payroll/.test(low) ? "High" : /not working|not showing|not applying|error|bug/.test(low) ? "Medium" : "Low";
+  var app=(t.match(/pushbundle|multivariants|discountray|orderrules|quotway|bundle|discount|variant/i)||["the app"])[0];
+  var firstLine=t.trim().split(/[.\n]/)[0];
+  var L=[];
+  L.push("BUG REPORT");
+  L.push("Title: "+titleCase(firstLine.slice(0,80)));
+  L.push("");
+  L.push("Environment:");
+  L.push("  - Store: "+(store||"[store URL needed]"));
+  L.push("  - App/area: "+app);
+  L.push("  - Browser/device: "+(browser||"[browser/device needed]"));
+  if(/after.*(update|release|change)/.test(low)) L.push("  - Started after: a recent update/release");
+  L.push("");
+  L.push("Steps to reproduce:");
+  L.push("  1. [Exact step the customer took]");
+  L.push("  2. [Next step]");
+  L.push("  3. [Where it goes wrong]");
+  L.push("");
+  L.push("Expected result:");
+  L.push("  - [What should happen]");
+  L.push("");
+  L.push("Actual result:");
+  L.push("  - "+titleCase(firstLine));
+  L.push("");
+  L.push("Severity: "+sev);
+  L.push("");
+  L.push("Notes / things checked:");
+  if(low.indexOf("embed")>-1) L.push("  - Check the app embed is enabled in Theme > Customize.");
+  if(low.indexOf("guest")>-1) L.push("  - Customer-specific logic may not resolve at guest checkout.");
+  L.push("  - Attach a screenshot or screen recording.");
+  L.push("  - Confirm whether it affects one customer or many.");
+  return L.join("\n");
+}
+
+function run(){
+  var v=document.getElementById("input").value.trim();
+  if(!v){ document.getElementById("out").innerHTML='<span class="empty">Please enter something first.</span>'; return; }
+  document.getElementById("out").textContent = mode==="test" ? genTests(v) : genBug(v);
+}
+document.getElementById("run").onclick=run;
+document.getElementById("clear").onclick=function(){ document.getElementById("input").value=""; document.getElementById("out").innerHTML='<span class="empty">Cleared.</span>'; };
+document.getElementById("copy").onclick=function(){ var txt=document.getElementById("out").innerText; navigator.clipboard.writeText(txt); var c=document.getElementById("copied"); c.classList.add("show"); setTimeout(function(){c.classList.remove("show")},1200); };
+renderChips();
+</script>
+</body>
+</html>
